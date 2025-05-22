@@ -1,92 +1,113 @@
-import { useState } from 'react';
+
+import React, { useState } from 'react';
 
 function Formulario() {
-  const [formData, setFormData] = useState({
+  const [datosFormulario, setDatosFormulario] = useState({
     nombre: '',
     sector: '',
   });
 
-  const [empanadas, setEmpanadas] = useState([
+  const [listaEmpanadas, setListaEmpanadas] = useState([
     { gusto: '', cantidad: '' }
   ]);
 
-  const [orders, setOrders] = useState([]);
+  const [listaPedidos, setListaPedidos] = useState([]);
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
-  };
+  function cambiarDato(evento) {
+    const nombreCampo = evento.target.name;
+    const valor = evento.target.value;
+    const nuevosDatos = {
+      nombre: datosFormulario.nombre,
+      sector: datosFormulario.sector
+    };
+    nuevosDatos[nombreCampo] = valor;
+    setDatosFormulario(nuevosDatos);
+  }
 
-  const handleEmpanadaChange = (index, event) => {
-    const { name, value } = event.target;
-    setEmpanadas((prevEmpanadas) => {
-      const newEmpanadas = [...prevEmpanadas];
-      newEmpanadas[index] = {
-        ...newEmpanadas[index],
-        [name]: value,
-      };
-      return newEmpanadas;
-    });
-  };
+  function cambiarEmpanada(indice, evento) {
+    const nombreCampo = evento.target.name;
+    const valor = evento.target.value;
+    const nuevasEmpanadas = listaEmpanadas.slice();
+    const empanada = {
+      gusto: nuevasEmpanadas[indice].gusto,
+      cantidad: nuevasEmpanadas[indice].cantidad
+    };
+    empanada[nombreCampo] = valor;
+    nuevasEmpanadas[indice] = empanada;
+    setListaEmpanadas(nuevasEmpanadas);
+  }
 
-  const addEmpanada = () => {
-    setEmpanadas((prevEmpanadas) => [...prevEmpanadas, { gusto: '', cantidad: '' }]);
-  };
+  function agregarEmpanada() {
+    const nuevasEmpanadas = listaEmpanadas.slice();
+    nuevasEmpanadas.push({ gusto: '', cantidad: '' });
+    setListaEmpanadas(nuevasEmpanadas);
+  }
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+  function enviarFormulario(evento) {
+    evento.preventDefault();
 
-    // Filter out empanadas with empty gusto or cantidad
-    const filteredEmpanadas = empanadas.filter(e => e.gusto && e.cantidad && Number(e.cantidad) > 0);
+    const empanadasValidas = [];
+    for (let i = 0; i < listaEmpanadas.length; i++) {
+      const e = listaEmpanadas[i];
+      if (e.gusto && e.cantidad && Number(e.cantidad) > 0) {
+        empanadasValidas.push({
+          gusto: e.gusto,
+          cantidad: Number(e.cantidad)
+        });
+      }
+    }
 
-    if (!formData.nombre || !formData.sector || filteredEmpanadas.length === 0) {
+    if (!datosFormulario.nombre || !datosFormulario.sector || empanadasValidas.length === 0) {
       alert('Por favor complete nombre, sector y al menos una empanada con cantidad válida.');
       return;
     }
 
-    const newOrder = {
-      nombre: formData.nombre,
-      sector: formData.sector,
-      empanadas: filteredEmpanadas.map(e => ({ ...e, cantidad: Number(e.cantidad) })),
+    const nuevoPedido = {
+      nombre: datosFormulario.nombre,
+      sector: datosFormulario.sector,
+      empanadas: empanadasValidas
     };
 
-    setOrders((prevOrders) => [...prevOrders, newOrder]);
+    const nuevosPedidos = listaPedidos.slice();
+    nuevosPedidos.push(nuevoPedido);
+    setListaPedidos(nuevosPedidos);
 
-    // Reset form
-    setFormData({ nombre: '', sector: '' });
-    setEmpanadas([{ gusto: '', cantidad: '' }]);
-  };
+    setDatosFormulario({ nombre: '', sector: '' });
+    setListaEmpanadas([{ gusto: '', cantidad: '' }]);
+  }
 
-  // Aggregate total empanadas by gusto
-  const totalByGusto = orders.reduce((acc, order) => {
-    order.empanadas.forEach(({ gusto, cantidad }) => {
-      acc[gusto] = (acc[gusto] || 0) + cantidad;
-    });
-    return acc;
-  }, {});
+  const totalPorGusto = {};
+  for (let j = 0; j < listaPedidos.length; j++) {
+    const pedido = listaPedidos[j];
+    for (let k = 0; k < pedido.empanadas.length; k++) {
+      const item = pedido.empanadas[k];
+      if (totalPorGusto[item.gusto]) {
+        totalPorGusto[item.gusto] += item.cantidad;
+      } else {
+        totalPorGusto[item.gusto] = item.cantidad;
+      }
+    }
+  }
 
   return (
     <>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="nombre">Nombre:</label>
+      <form onSubmit={enviarFormulario}>
+        <label>Nombre:</label>
         <input
           type="text"
           id="nombre"
           name="nombre"
-          value={formData.nombre}
-          onChange={handleChange}
+          value={datosFormulario.nombre}
+          onChange={cambiarDato}
           placeholder="Ingresa tu nombre"
         />
         <br />
-        <label htmlFor="sector">Sector:</label>
+        <label>Sector:</label>
         <select
           id="sector"
           name="sector"
-          value={formData.sector}
-          onChange={handleChange}
+          value={datosFormulario.sector}
+          onChange={cambiarDato}
         >
           <option value="">Selecciona tu sector</option>
           <option value="Sistemas">Sistemas</option>
@@ -98,58 +119,73 @@ function Formulario() {
         </select>
         <br />
         <h3>Empanadas</h3>
-        {empanadas.map((empanada, index) => (
-          <div key={index}>
-            <label>Gusto:</label>
-            <select
-              name="gusto"
-              value={empanada.gusto}
-              onChange={(e) => handleEmpanadaChange(index, e)}
-            >
-              <option value="">Selecciona un gusto</option>
-              <option value="Carne">Carne</option>
-              <option value="Pollo">Pollo</option>
-              <option value="Jamón y Queso">Jamón y Queso</option>
-              <option value="Verdura">Verdura</option>
-              <option value="Queso y Cebolla">Queso y Cebolla</option>
-            </select>
-            <label>Cantidad:</label>
-            <input
-              type="number"
-              name="cantidad"
-              min="1"
-              value={empanada.cantidad}
-              onChange={(e) => handleEmpanadaChange(index, e)}
-              placeholder="Cantidad"
-            />
-          </div>
-        ))}
-        <button type="button" onClick={addEmpanada}>Agregar otra empanada</button>
+        {listaEmpanadas.map(function(empanada, indice) {
+          return (
+            <div key={indice}>
+              <label>Gusto:</label>
+              <select
+                name="gusto"
+                value={empanada.gusto}
+                onChange={function(e) { return cambiarEmpanada(indice, e); }}
+              >
+                <option value="">Selecciona un gusto</option>
+                <option value="Carne">Carne</option>
+                <option value="Pollo">Pollo</option>
+                <option value="Jamón y Queso">Jamón y Queso</option>
+                <option value="Verdura">Verdura</option>
+                <option value="Queso y Cebolla">Queso y Cebolla</option>
+              </select>
+              <label>Cantidad:</label>
+              <input
+                type="number"
+                name="cantidad"
+                min="1"
+                value={empanada.cantidad}
+                onChange={function(e) { return cambiarEmpanada(indice, e); }}
+                placeholder="Cantidad"
+              />
+            </div>
+          );
+        })}
+        <button type="button" onClick={agregarEmpanada}>Agregar otra empanada</button>
         <br />
         <button type="submit">Terminar pedido</button>
       </form>
 
       <h2>Resumen total de empanadas por gusto</h2>
       <ul>
-        {Object.entries(totalByGusto).map(([gusto, cantidad]) => (
-          <li key={gusto}>{gusto}: {cantidad}</li>
-        ))}
-        {Object.keys(totalByGusto).length === 0 && <li>No hay pedidos aún.</li>}
+        {(() => {
+          let hasPedidos = false;
+          const items = [];
+          for (const gusto in totalPorGusto) {
+            hasPedidos = true;
+            items.push(<li key={gusto}>{gusto}: {totalPorGusto[gusto]}</li>);
+          }
+          if (!hasPedidos) {
+            return <li>No hay pedidos aún.</li>;
+          }
+          return items;
+        })()}
       </ul>
 
       <h2>Pedidos por persona</h2>
       <ul>
-        {orders.length === 0 && <li>No hay pedidos aún.</li>}
-        {orders.map((order, idx) => (
-          <li key={idx}>
-            <strong>{order.nombre} ({order.sector}):</strong>
-            <ul>
-              {order.empanadas.map((e, i) => (
-                <li key={i}>{e.cantidad} x {e.gusto}</li>
-              ))}
-            </ul>
-          </li>
-        ))}
+        {listaPedidos.length === 0 ? (
+          <li>No hay pedidos aún.</li>
+        ) : (
+          listaPedidos.map(function(pedido, idx) {
+            return (
+              <li key={idx}>
+                <strong>{pedido.nombre} ({pedido.sector}):</strong>
+                <ul>
+                  {pedido.empanadas.map(function(e, i) {
+                    return <li key={i}>{e.cantidad} x {e.gusto}</li>;
+                  })}
+                </ul>
+              </li>
+            );
+          })
+        )}
       </ul>
     </>
   );
